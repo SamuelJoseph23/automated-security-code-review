@@ -1,0 +1,182 @@
+[
+  {
+    "file": "examples\\vulnerable_code\\sql_injection.py",
+    "language": "python",
+    "vulnerabilities": [
+      {
+        "type": "Xss",
+        "severity": "High",
+        "line": 29,
+        "description": "Cross-Site Scripting (XSS) vulnerability",
+        "code_snippet": "result = eval(expression)",
+        "exploit_scenario": "Attacker can inject: <script>alert(document.cookie)</script>",
+        "fix_recommendation": "Escape user input and use safe rendering methods",
+        "cwe": "CWE-79",
+        "confidence": 0.6,
+        "detection_method": "Pattern Matching"
+      },
+      {
+        "type": "Command Injection",
+        "severity": "Critical",
+        "line": 24,
+        "description": "Command Injection vulnerability detected",
+        "code_snippet": "os.system(f\"echo {user_input}\")",
+        "exploit_scenario": "Attacker can execute: ; rm -rf /",
+        "fix_recommendation": "Avoid shell=True, use subprocess with lists, validate input",
+        "cwe": "CWE-78",
+        "confidence": 0.6,
+        "detection_method": "Pattern Matching"
+      },
+      {
+        "type": "Command Injection",
+        "severity": "Critical",
+        "line": 25,
+        "description": "Command Injection vulnerability detected",
+        "code_snippet": "subprocess.call(\"ping \" + user_input, shell=True)",
+        "exploit_scenario": "Attacker can execute: ; rm -rf /",
+        "fix_recommendation": "Avoid shell=True, use subprocess with lists, validate input",
+        "cwe": "CWE-78",
+        "confidence": 0.6,
+        "detection_method": "Pattern Matching"
+      },
+      {
+        "type": "Command Injection",
+        "severity": "Critical",
+        "line": 29,
+        "description": "Command Injection vulnerability detected",
+        "code_snippet": "result = eval(expression)",
+        "exploit_scenario": "Attacker can execute: ; rm -rf /",
+        "fix_recommendation": "Avoid shell=True, use subprocess with lists, validate input",
+        "cwe": "CWE-78",
+        "confidence": 0.6,
+        "detection_method": "Pattern Matching"
+      },
+      {
+        "type": "Hardcoded Secrets",
+        "severity": "Critical",
+        "line": 15,
+        "description": "Hardcoded credentials detected",
+        "code_snippet": "admin_password = \"admin123\"",
+        "exploit_scenario": "Credentials exposed in source code/repository",
+        "fix_recommendation": "Use environment variables or secure key management",
+        "cwe": "CWE-798",
+        "confidence": 0.6,
+        "detection_method": "Pattern Matching"
+      },
+      {
+        "type": "Hardcoded Secrets",
+        "severity": "Critical",
+        "line": 16,
+        "description": "Hardcoded credentials detected",
+        "code_snippet": "api_key = \"sk-1234567890abcdef\"",
+        "exploit_scenario": "Credentials exposed in source code/repository",
+        "fix_recommendation": "Use environment variables or secure key management",
+        "cwe": "CWE-798",
+        "confidence": 0.6,
+        "detection_method": "Pattern Matching"
+      },
+      {
+        "type": "Potentially Dangerous Import",
+        "severity": "Medium",
+        "line": 2,
+        "description": "Import of 'os' - requires careful usage",
+        "code_snippet": "import os",
+        "detection_method": "AST Analysis"
+      },
+      {
+        "type": "Potentially Dangerous Import",
+        "severity": "Medium",
+        "line": 3,
+        "description": "Import of 'subprocess' - requires careful usage",
+        "code_snippet": "import subprocess",
+        "detection_method": "AST Analysis"
+      },
+      {
+        "type": "Hardcoded Credentials",
+        "severity": "Critical",
+        "line": 15,
+        "description": "Hardcoded admin_password detected",
+        "code_snippet": "admin_password = 'admin123'",
+        "detection_method": "AST Analysis"
+      },
+      {
+        "type": "Hardcoded Credentials",
+        "severity": "Critical",
+        "line": 16,
+        "description": "Hardcoded api_key detected",
+        "code_snippet": "api_key = 'sk-1234567890abcdef'",
+        "detection_method": "AST Analysis"
+      },
+      {
+        "type": "Command Injection Risk",
+        "severity": "Critical",
+        "line": 25,
+        "description": "subprocess with shell=True is dangerous",
+        "code_snippet": "subprocess.call('ping ' + user_input, shell=True)",
+        "detection_method": "AST Analysis"
+      },
+      {
+        "type": "Dangerous Function Call",
+        "severity": "Critical",
+        "line": 29,
+        "description": "Use of eval() - arbitrary code execution",
+        "code_snippet": "eval(expression)",
+        "detection_method": "AST Analysis"
+      },
+      {
+        "type": "B404",
+        "severity": "LOW",
+        "line": 3,
+        "description": "Consider possible security implications associated with the subprocess module.",
+        "code_snippet": "2 import os\n3 import subprocess\n4 \n",
+        "detection_method": "Bandit"
+      },
+      {
+        "type": "B608",
+        "severity": "MEDIUM",
+        "line": 9,
+        "description": "Possible SQL injection vector through string-based query construction.",
+        "code_snippet": "8     cursor = conn.cursor()\n9     query = f\"SELECT * FROM users WHERE username = '{username}'\"\n10     cursor.execute(query)\n",
+        "detection_method": "Bandit"
+      },
+      {
+        "type": "B105",
+        "severity": "LOW",
+        "line": 15,
+        "description": "Possible hardcoded password: 'admin123'",
+        "code_snippet": "14 def login(username, password):\n15     admin_password = \"admin123\"\n16     api_key = \"sk-1234567890abcdef\"\n",
+        "detection_method": "Bandit"
+      },
+      {
+        "type": "B605",
+        "severity": "HIGH",
+        "line": 24,
+        "description": "Starting a process with a shell, possible injection detected, security issue.",
+        "code_snippet": "23 def run_command(user_input):\n24     os.system(f\"echo {user_input}\")\n25     subprocess.call(\"ping \" + user_input, shell=True)\n",
+        "detection_method": "Bandit"
+      },
+      {
+        "type": "B602",
+        "severity": "HIGH",
+        "line": 25,
+        "description": "subprocess call with shell=True identified, security issue.",
+        "code_snippet": "24     os.system(f\"echo {user_input}\")\n25     subprocess.call(\"ping \" + user_input, shell=True)\n26 \n",
+        "detection_method": "Bandit"
+      },
+      {
+        "type": "B307",
+        "severity": "MEDIUM",
+        "line": 29,
+        "description": "Use of possibly insecure function - consider using safer ast.literal_eval.",
+        "code_snippet": "28 def calculate(expression):\n29     result = eval(expression)\n30     return result\n",
+        "detection_method": "Bandit"
+      }
+    ],
+    "summary": {
+      "total_vulnerabilities": 18,
+      "critical": 9,
+      "high": 1,
+      "medium": 8
+    }
+  }
+]

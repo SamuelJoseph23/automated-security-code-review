@@ -8,6 +8,7 @@ def get_user(username):
     cursor = conn.cursor()
     query = f"SELECT * FROM users WHERE username = '{username}'"
     cursor.execute(query)
+    
     return cursor.fetchall()
 
 # VULNERABLE: Hardcoded credentials

@@ -16,9 +16,9 @@ def scan(path: str, output: str = "report.json", severity: str = "medium", use_m
     
     console.print(f"\n🎯 Target: {path}", style="cyan")
     console.print(f"🤖 ML Enabled: {use_ml}\n", style="cyan")
-    
     try:
         analyzer = SecurityCodeAnalyzer(use_ml=use_ml)
+
     except Exception as e:
         console.print(f"\n❌ Error initializing analyzer: {str(e)}", style="bold red")
         return
