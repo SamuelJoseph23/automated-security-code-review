@@ -28,6 +28,7 @@ jobs:
         # Pinning tree-sitter to 0.21.3 to avoid breaking API changes
         pip install "tree-sitter==0.21.3"
         pip install tree-sitter-python tree-sitter-javascript tree-sitter-java
+        pip install scikit-learn
         pip install streamlit plotly pandas rich typer
 
     - name: Create Test Data
