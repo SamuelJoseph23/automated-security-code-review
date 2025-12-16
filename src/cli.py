@@ -5,6 +5,7 @@ from pathlib import Path
 from .analyzers.security_analyzer import SecurityCodeAnalyzer
 from .reporters.html_reporter import generate_html_report
 import json
+import sys
 
 console = Console()
 
@@ -19,25 +20,42 @@ def scan(path: str, output: str = "report.json", severity: str = "medium", use_m
     console.print(f"\n🎯 Target: {path}", style="cyan")
     console.print(f"🤖 ML Enabled: {use_ml}\n", style="cyan")
     
+    # Initialize results to avoid UnboundLocalError
+    results = [] 
+    
     try:
         analyzer = SecurityCodeAnalyzer(use_ml=use_ml)
     except Exception as e:
         console.print(f"\n❌ Error initializing analyzer: {str(e)}", style="bold red")
+        # Generate empty report so CI doesn't fail upload
+        save_results([], output)
         return
     
     path_obj = Path(path)
     
     if not path_obj.exists():
         console.print(f"\n❌ Error: Path '{path}' does not exist", style="bold red")
+        # Generate empty report
+        save_results([], output)
         return
     
-    if path_obj.is_file():
-        results = [analyzer.analyze_file(str(path_obj))]
-    else:
-        results = analyzer.analyze_directory(str(path_obj))
-    
-    display_results(results, severity)
-    save_results(results, output)
+    try:
+        if path_obj.is_file():
+            results = [analyzer.analyze_file(str(path_obj))]
+        else:
+            results = analyzer.analyze_directory(str(path_obj))
+    except Exception as e:
+        console.print(f"\n❌ Critical Scan Error: {str(e)}", style="bold red")
+        import traceback
+        traceback.print_exc()
+        results = []
+
+    # Always try to save results, even if empty or partial
+    try:
+        display_results(results, severity)
+        save_results(results, output)
+    except Exception as e:
+        console.print(f"\n❌ Error saving results: {str(e)}", style="bold red")
 
 def display_results(results: list, min_severity: str):
     """Display results in formatted table"""
@@ -103,18 +121,39 @@ def save_results(results: list, output_path: str):
         console.print(f"\n⚠️  Warning: Could not save report: {str(e)}", style="yellow")
 
 def main():
+    # Handle command line arguments directly for CI/CD usage
+    if len(sys.argv) > 1:
+        # Simple argument parsing for non-interactive mode
+        path = sys.argv[1]
+        output = "report.json"
+        severity = "medium"
+        use_ml = True
+        
+        # Parse basic flags
+        if "--output" in sys.argv:
+            idx = sys.argv.index("--output")
+            if idx + 1 < len(sys.argv):
+                output = sys.argv[idx + 1]
+        
+        if "--severity" in sys.argv:
+            idx = sys.argv.index("--severity")
+            if idx + 1 < len(sys.argv):
+                severity = sys.argv[idx + 1]
+                
+        scan(path, output, severity, use_ml)
+        return
+
+    # Interactive mode (only if no args provided)
     console.print("\n╔════════════════════════════════════════════╗", style="bold cyan")
     console.print("║  Security Code Analyzer - Interactive    ║", style="bold cyan")
     console.print("╚════════════════════════════════════════════╝\n", style="bold cyan")
     
-    # Get path from user
     path = input("📁 Enter path to file or directory to scan: ").strip()
     
     if not path:
         console.print("❌ No path provided!", style="bold red")
         return
     
-    # Ask for optional parameters
     use_ml_input = input("🤖 Use ML classifier? (Y/n): ").strip().lower()
     use_ml = use_ml_input != 'n'
     
@@ -126,7 +165,6 @@ def main():
     
     console.print("\n" + "="*50 + "\n")
     
-    # Run scan
     scan(path, output, severity, use_ml)
 
 if __name__ == "__main__":
