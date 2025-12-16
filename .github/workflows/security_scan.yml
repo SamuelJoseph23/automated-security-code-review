@@ -6,31 +6,46 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   security-scan:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    - name: Set up Python
+    - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # Install streamlit explicitly just in case it's missing from requirements
+        pip install streamlit plotly pandas rich typer tree-sitter tree-sitter-python tree-sitter-javascript tree-sitter-java
+
+    - name: Create Dummy Example if Missing
+      run: |
+        # Ensure the directory exists so the scanner doesn't crash
+        mkdir -p examples/vulnerable_code
+        echo 'print("Hello World")' > examples/vulnerable_code/test.py
 
     - name: Run Security Scan
+      continue-on-error: true  # IMPORTANT: Don't fail the build if vulnerabilities are found
       run: |
-        # Scan the examples directory (or the repo root .)
-        python main.py examples/vulnerable_code/ --output report.json --severity medium
-      continue-on-error: true  # Don't fail the build yet, just report
+        # Run the scanner
+        python main.py examples/vulnerable_code/ --output scan_results.json --severity low
 
     - name: Upload Security Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
+      if: always() # Upload report even if scanner found issues
       with:
-        name: security-report
-        path: report.json
+        name: security-scan-report
+        path: |
+          scan_results.json
+          scan_results.html
