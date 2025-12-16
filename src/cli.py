@@ -1,171 +1,74 @@
 import typer
-from rich.console import Console
-from rich.table import Table
+import json
+import os
+import sys
+from typing import Optional
 from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+
+# Import your analyzer and reporter
+# Ensure these match your actual file structure
 from .analyzers.security_analyzer import SecurityCodeAnalyzer
 from .reporters.html_reporter import generate_html_report
-import json
-import sys
 
+# Initialize Typer app and Rich console
+app = typer.Typer(help="Automated Security Code Review CLI")
 console = Console()
 
-def scan(path: str, output: str = "report.json", severity: str = "medium", use_ml: bool = True):
-    """Scan code for security vulnerabilities"""
+@app.command()
+def scan(
+    target_path: str = typer.Argument(..., help="Path to the source code file or directory to scan"),
+    output: str = typer.Option("scan_results.json", "--output", "-o", help="Path to save the JSON output"),
+    severity: str = typer.Option("low", "--severity", "-s", help="Minimum severity level (low, medium, high)"),
+    generate_html: bool = typer.Option(True, "--html/--no-html", help="Generate an HTML report alongside the JSON")
+):
+    """
+    Run a security scan on the specified source code.
+    """
+    target = Path(target_path)
     
-    console.print("╔════════════════════════════════════════════╗", style="bold blue")
-    console.print("║  Classical ML Security Code Analyzer      ║", style="bold blue")
-    console.print("║  Pattern + AST + ML Detection             ║", style="bold blue")
-    console.print("╚════════════════════════════════════════════╝", style="bold blue")
-    
-    console.print(f"\n🎯 Target: {path}", style="cyan")
-    console.print(f"🤖 ML Enabled: {use_ml}\n", style="cyan")
-    
-    # Initialize results to avoid UnboundLocalError
-    results = [] 
-    
-    try:
-        analyzer = SecurityCodeAnalyzer(use_ml=use_ml)
-    except Exception as e:
-        console.print(f"\n❌ Error initializing analyzer: {str(e)}", style="bold red")
-        # Generate empty report so CI doesn't fail upload
-        save_results([], output)
-        return
-    
-    path_obj = Path(path)
-    
-    if not path_obj.exists():
-        console.print(f"\n❌ Error: Path '{path}' does not exist", style="bold red")
-        # Generate empty report
-        save_results([], output)
-        return
-    
-    try:
-        if path_obj.is_file():
-            results = [analyzer.analyze_file(str(path_obj))]
-        else:
-            results = analyzer.analyze_directory(str(path_obj))
-    except Exception as e:
-        console.print(f"\n❌ Critical Scan Error: {str(e)}", style="bold red")
-        import traceback
-        traceback.print_exc()
-        results = []
+    if not target.exists():
+        console.print(f"[bold red]Error:[/bold red] Path '{target_path}' does not exist.")
+        raise typer.Exit(code=1)
 
-    # Always try to save results, even if empty or partial
-    try:
-        display_results(results, severity)
-        save_results(results, output)
-    except Exception as e:
-        console.print(f"\n❌ Error saving results: {str(e)}", style="bold red")
+    console.print(Panel.fit(f"🚀 Starting Security Scan on: [bold]{target}[/bold]", border_style="blue"))
 
-def display_results(results: list, min_severity: str):
-    """Display results in formatted table"""
-    severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
-    min_level = severity_order.get(min_severity.lower(), 2)
-    
-    table = Table(title="Security Vulnerabilities Found")
-    table.add_column("File", style="cyan", no_wrap=True)
-    table.add_column("Type", style="magenta")
-    table.add_column("Severity", style="red")
-    table.add_column("Line", style="yellow")
-    table.add_column("Method", style="green")
-    table.add_column("Confidence", style="blue")
-    
-    total_vulns = 0
-    
-    for result in results:
-        if 'vulnerabilities' not in result:
-            continue
+    try:
+        # 1. Initialize Analyzer
+        # Pass the severity level string directly if your analyzer expects a string
+        analyzer = SecurityCodeAnalyzer(min_severity=severity)
         
-        for vuln in result['vulnerabilities']:
-            severity = vuln.get('severity', 'low').lower()
+        # 2. Run Analysis
+        # The analyzer should handle directory walking if target is a dir
+        results = analyzer.scan_directory(str(target)) if target.is_dir() else analyzer.scan_file(str(target))
+        
+        # 3. Save JSON Report
+        with open(output, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=4)
+        
+        console.print(f"[green]✔ JSON report saved to:[/green] {output}")
+
+        # 4. Generate HTML Report
+        if generate_html:
+            # Determine HTML filename
+            html_path = str(Path(output).with_suffix('.html'))
             
-            if severity_order.get(severity, 1) >= min_level:
-                confidence = vuln.get('confidence', vuln.get('ml_confidence', 0.5))
-                
-                table.add_row(
-                    Path(result.get('file', 'N/A')).name,
-                    vuln.get('type', 'Unknown')[:30],
-                    vuln.get('severity', 'Unknown'),
-                    str(vuln.get('line', 'N/A')),
-                    vuln.get('detection_method', 'Unknown')[:15],
-                    f"{confidence:.2f}"
-                )
-                total_vulns += 1
-    
-    console.print(table)
-    console.print(f"\n🎯 Total vulnerabilities found: {total_vulns}")
-    
-    if total_vulns == 0:
-        console.print("✨ No vulnerabilities detected!", style="bold green")
-
-def save_results(results: list, output_path: str):
-    """Save results to JSON and HTML files"""
-    try:
-        # Save JSON Report
-        with open(output_path, 'w') as f:
-            json.dump(results, f, indent=2)
-        
-        # Save HTML Report
-        if output_path.endswith('.json'):
-            html_path = output_path.replace('.json', '.html')
-        else:
-            html_path = output_path + '.html'
+            console.print("[yellow]⚡ Generating HTML report...[/yellow]")
+            generate_html_report(results, output_path=html_path)
             
-        generate_html_report(results, html_path)
-        
-        console.print(f"\n✅ Reports saved:", style="bold green")
-        console.print(f"   📄 JSON: {output_path}")
-        console.print(f"   🌐 HTML: {html_path}")
-        
+            console.print(f"[bold green]✔ HTML report generated successfully:[/bold green] {html_path}")
+
     except Exception as e:
-        console.print(f"\n⚠️  Warning: Could not save report: {str(e)}", style="yellow")
+        console.print(f"[bold red]❌ An error occurred during the scan:[/bold red] {e}")
+        # Only uncomment for deep debugging:
+        # import traceback
+        # traceback.print_exc()
+        raise typer.Exit(code=1)
 
 def main():
-    # Handle command line arguments directly for CI/CD usage
-    if len(sys.argv) > 1:
-        # Simple argument parsing for non-interactive mode
-        path = sys.argv[1]
-        output = "report.json"
-        severity = "medium"
-        use_ml = True
-        
-        # Parse basic flags
-        if "--output" in sys.argv:
-            idx = sys.argv.index("--output")
-            if idx + 1 < len(sys.argv):
-                output = sys.argv[idx + 1]
-        
-        if "--severity" in sys.argv:
-            idx = sys.argv.index("--severity")
-            if idx + 1 < len(sys.argv):
-                severity = sys.argv[idx + 1]
-                
-        scan(path, output, severity, use_ml)
-        return
-
-    # Interactive mode (only if no args provided)
-    console.print("\n╔════════════════════════════════════════════╗", style="bold cyan")
-    console.print("║  Security Code Analyzer - Interactive    ║", style="bold cyan")
-    console.print("╚════════════════════════════════════════════╝\n", style="bold cyan")
-    
-    path = input("📁 Enter path to file or directory to scan: ").strip()
-    
-    if not path:
-        console.print("❌ No path provided!", style="bold red")
-        return
-    
-    use_ml_input = input("🤖 Use ML classifier? (Y/n): ").strip().lower()
-    use_ml = use_ml_input != 'n'
-    
-    severity_input = input("⚠️  Minimum severity level (low/medium/high/critical) [medium]: ").strip().lower()
-    severity = severity_input if severity_input in ['low', 'medium', 'high', 'critical'] else 'medium'
-    
-    output_input = input("💾 Output file name [report.json]: ").strip()
-    output = output_input if output_input else 'report.json'
-    
-    console.print("\n" + "="*50 + "\n")
-    
-    scan(path, output, severity, use_ml)
+    """Entry point for the CLI."""
+    app()
 
 if __name__ == "__main__":
     main()
