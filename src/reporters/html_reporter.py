@@ -1,155 +1,116 @@
 import os
+import json
 from datetime import datetime
 
-def generate_html_report(results: list, output_file: str = "report.html"):
-    """Generate a styled HTML report from scan results"""
-    
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Calculate summary stats
-    total_files = len(results)
-    total_vulns = sum(len(r.get('vulnerabilities', [])) for r in results)
-    critical = sum(sum(1 for v in r.get('vulnerabilities', []) if v['severity'] == 'Critical') for r in results)
-    high = sum(sum(1 for v in r.get('vulnerabilities', []) if v['severity'] == 'High') for r in results)
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Security Scan Report</title>
-        <style>
-            :root {{
-                --primary: #2c3e50;
-                --secondary: #34495e;
-                --accent: #3498db;
-                --bg: #f5f6fa;
-                --critical: #e74c3c;
-                --high: #e67e22;
-                --medium: #f1c40f;
-                --low: #2ecc71;
-            }}
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg); color: #333; }}
-            .header {{ background: var(--primary); color: white; padding: 2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
-            .container {{ max-width: 1200px; margin: 0 auto; padding: 20px; }}
-            .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }}
-            .stat-card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; }}
-            .stat-number {{ font-size: 2.5rem; font-weight: bold; color: var(--primary); }}
-            .stat-label {{ color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; }}
-            .vuln-card {{ background: white; margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }}
-            .vuln-header {{ padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }}
-            .severity-badge {{ padding: 5px 12px; border-radius: 15px; color: white; font-weight: bold; font-size: 0.9rem; }}
-            .severity-Critical {{ background: var(--critical); }}
-            .severity-High {{ background: var(--high); }}
-            .severity-Medium {{ background: var(--medium); color: #333; }}
-            .severity-Low {{ background: var(--low); }}
-            .vuln-body {{ padding: 20px; }}
-            .code-block {{ background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; font-family: 'Consolas', monospace; overflow-x: auto; margin: 10px 0; }}
-            .meta-info {{ display: flex; gap: 20px; color: #666; font-size: 0.9rem; margin-bottom: 10px; }}
-            .fix-box {{ background: #e8f6f3; border-left: 4px solid #1abc9c; padding: 15px; margin-top: 15px; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <div class="container">
-                <h1>🛡️ Security Scan Report</h1>
-                <p>Generated on {timestamp}</p>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-number">{total_files}</div>
-                    <div class="stat-label">Files Scanned</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" style="color: var(--critical)">{critical}</div>
-                    <div class="stat-label">Critical Issues</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" style="color: var(--high)">{high}</div>
-                    <div class="stat-label">High Issues</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{total_vulns}</div>
-                    <div class="stat-label">Total Vulnerabilities</div>
-                </div>
-            </div>
-
-            {% for result in results %}
-                {% if result.vulnerabilities %}
-                <h2 style="margin-top: 40px; color: var(--secondary);">📄 {result.file}</h2>
-                {% for vuln in result.vulnerabilities %}
-                <div class="vuln-card">
-                    <div class="vuln-header">
-                        <h3>{vuln.type}</h3>
-                        <span class="severity-badge severity-{vuln.severity}">{vuln.severity}</span>
-                    </div>
-                    <div class="vuln-body">
-                        <div class="meta-info">
-                            <span>📍 Line {vuln.line}</span>
-                            <span>🔍 Detection: {vuln.detection_method}</span>
-                            <span>🤖 Confidence: {vuln.confidence}</span>
-                        </div>
-                        <p>{vuln.description}</p>
-                        
-                        <div class="code-block">
-                            {vuln.code_snippet}
-                        </div>
-
-                        <div class="fix-box">
-                            <strong>💡 Recommendation:</strong><br>
-                            {vuln.fix_recommendation}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-                {% endif %}
-            {% endfor %}
-        </div>
-    </body>
-    </html>
+def generate_html_report(scan_results, output_path="scan_results.html"):
+    """
+    Generates a standalone HTML report from the scan results.
     """
     
-    # Simple template engine replacer to avoid Jinja2 dependency complexity for now
-    # We reconstruct the string manually for the loop part since f-strings don't do loops
+    # safe extraction of data with defaults
+    summary = scan_results.get("summary", {})
+    vulnerabilities = scan_results.get("vulnerabilities", [])
     
-    report_body = ""
-    for result in results:
-        if not result.get('vulnerabilities'):
-            continue
+    total_files = summary.get("total_files", 0)
+    total_issues = summary.get("total_issues", 0)
+    scan_duration = summary.get("scan_duration", 0)
+    
+    # Generate the vulnerability rows using a standard python loop
+    vuln_rows_html = ""
+    if not vulnerabilities:
+        vuln_rows_html = """
+        <div class="no-issues">
+            <h3>✅ No vulnerabilities found</h3>
+            <p>Great job! Your code passed all security checks.</p>
+        </div>
+        """
+    else:
+        for vuln in vulnerabilities:
+            # Color code severity
+            severity_class = vuln.get('severity', 'low').lower()
             
-        report_body += f'<h2 style="margin-top: 40px; color: var(--secondary);">📄 {result["file"]}</h2>'
-        
-        for vuln in result['vulnerabilities']:
-            sev_class = vuln['severity']
-            report_body += f"""
-            <div class="vuln-card">
+            vuln_rows_html += f"""
+            <div class="vuln-card {severity_class}">
                 <div class="vuln-header">
-                    <h3>{vuln['type']}</h3>
-                    <span class="severity-badge severity-{sev_class}">{sev_class}</span>
+                    <span class="severity-badge {severity_class}">{vuln.get('severity', 'UNKNOWN').upper()}</span>
+                    <span class="vuln-type">{vuln.get('type', 'Unknown Issue')}</span>
                 </div>
                 <div class="vuln-body">
-                    <div class="meta-info">
-                        <span>📍 Line {vuln['line']}</span>
-                        <span>🔍 {vuln.get('detection_method', 'Pattern')}</span>
+                    <p><strong>Description:</strong> {vuln.get('description', 'No description provided')}</p>
+                    <p><strong>File:</strong> <code>{vuln.get('file', 'N/A')}</code> : Line {vuln.get('line', '?')}</p>
+                    <div class="code-snippet">
+                        <pre>{vuln.get('code', '')}</pre>
                     </div>
-                    <p>{vuln['description']}</p>
-                    <div class="code-block">{vuln.get('code_snippet', '').replace('<', '&lt;')}</div>
-                    <div class="fix-box">
-                        <strong>💡 Recommendation:</strong><br>
-                        {vuln.get('fix_recommendation', 'No specific fix provided')}
-                    </div>
+                    <p class="recommendation"><strong>Fix:</strong> {vuln.get('recommendation', 'Review manually')}</p>
                 </div>
             </div>
             """
 
-    # Combine parts
-    final_html = html_content.split('{% for result in results %}')[0] + report_body + html_content.split('{% endfor %}')[-1].replace('{% endfor %}', '').replace('{% endif %}', '')
-    
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(final_html)
+    # Complete HTML Template
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Scan Report</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f4f6f8; }}
+        .header {{ background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
+        .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }}
+        .stat-card {{ background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border: 1px solid #e1e4e8; }}
+        .stat-value {{ font-size: 24px; font-weight: bold; color: #0366d6; }}
+        .stat-label {{ color: #586069; font-size: 14px; }}
         
-    print(f"   📄 HTML report generated: {output_file}")
+        .vuln-card {{ background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; overflow: hidden; border-left: 5px solid #ccc; }}
+        .vuln-card.high {{ border-left-color: #d73a49; }}
+        .vuln-card.medium {{ border-left-color: #f9c513; }}
+        .vuln-card.low {{ border-left-color: #2ea44f; }}
+        
+        .vuln-header {{ padding: 12px 20px; background: #f6f8fa; border-bottom: 1px solid #eaecef; display: flex; align-items: center; gap: 15px; }}
+        .vuln-body {{ padding: 20px; }}
+        
+        .severity-badge {{ padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #fff; }}
+        .severity-badge.high {{ background: #d73a49; }}
+        .severity-badge.medium {{ background: #b08800; color: white; }}
+        .severity-badge.low {{ background: #2ea44f; }}
+        
+        .code-snippet {{ background: #f6f8fa; padding: 10px; border-radius: 4px; overflow-x: auto; margin: 10px 0; border: 1px solid #eaecef; }}
+        .recommendation {{ background: #eefcfd; padding: 10px; border-left: 4px solid #0366d6; margin-top: 15px; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Security Code Review Report</h1>
+        <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+        
+        <div class="summary-grid">
+            <div class="stat-card">
+                <div class="stat-value">{total_issues}</div>
+                <div class="stat-label">Issues Found</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{total_files}</div>
+                <div class="stat-label">Files Scanned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{scan_duration:.2f}s</div>
+                <div class="stat-label">Scan Duration</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="results-container">
+        {vuln_rows_html}
+    </div>
+</body>
+</html>
+    """
+
+    # Write file
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        print(f"✅ HTML Report generated: {output_path}")
+    except Exception as e:
+        print(f"❌ Failed to generate HTML report: {e}")
+
