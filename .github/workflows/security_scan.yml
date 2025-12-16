@@ -1,0 +1,36 @@
+name: Security Code Review
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Security Scan
+      run: |
+        # Scan the examples directory (or the repo root .)
+        python main.py examples/vulnerable_code/ --output report.json --severity medium
+      continue-on-error: true  # Don't fail the build yet, just report
+
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: report.json

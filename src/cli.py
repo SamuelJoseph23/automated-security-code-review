@@ -1,7 +1,9 @@
+import typer
 from rich.console import Console
 from rich.table import Table
 from pathlib import Path
 from .analyzers.security_analyzer import SecurityCodeAnalyzer
+from .reporters.html_reporter import generate_html_report
 import json
 
 console = Console()
@@ -16,9 +18,9 @@ def scan(path: str, output: str = "report.json", severity: str = "medium", use_m
     
     console.print(f"\n🎯 Target: {path}", style="cyan")
     console.print(f"🤖 ML Enabled: {use_ml}\n", style="cyan")
+    
     try:
         analyzer = SecurityCodeAnalyzer(use_ml=use_ml)
-
     except Exception as e:
         console.print(f"\n❌ Error initializing analyzer: {str(e)}", style="bold red")
         return
@@ -36,8 +38,6 @@ def scan(path: str, output: str = "report.json", severity: str = "medium", use_m
     
     display_results(results, severity)
     save_results(results, output)
-    
-    console.print(f"\n✅ Scan complete! Report saved to: {output}", style="bold green")
 
 def display_results(results: list, min_severity: str):
     """Display results in formatted table"""
@@ -81,10 +81,24 @@ def display_results(results: list, min_severity: str):
         console.print("✨ No vulnerabilities detected!", style="bold green")
 
 def save_results(results: list, output_path: str):
-    """Save results to JSON file"""
+    """Save results to JSON and HTML files"""
     try:
+        # Save JSON Report
         with open(output_path, 'w') as f:
             json.dump(results, f, indent=2)
+        
+        # Save HTML Report
+        if output_path.endswith('.json'):
+            html_path = output_path.replace('.json', '.html')
+        else:
+            html_path = output_path + '.html'
+            
+        generate_html_report(results, html_path)
+        
+        console.print(f"\n✅ Reports saved:", style="bold green")
+        console.print(f"   📄 JSON: {output_path}")
+        console.print(f"   🌐 HTML: {html_path}")
+        
     except Exception as e:
         console.print(f"\n⚠️  Warning: Could not save report: {str(e)}", style="yellow")
 
