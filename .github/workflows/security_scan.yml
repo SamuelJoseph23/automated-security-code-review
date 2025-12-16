@@ -25,32 +25,42 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install requirements if file exists
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        # Force install critical packages
-        pip install streamlit plotly pandas rich typer tree-sitter tree-sitter-python tree-sitter-javascript tree-sitter-java
+        # Pin tree-sitter to 0.21.3 to avoid breaking API changes (no build_library in 0.22+)
+        pip install "tree-sitter==0.21.3"
+        # Install language parsers
+        pip install tree-sitter-python tree-sitter-javascript tree-sitter-java
+        # Install other requirements
+        pip install streamlit plotly pandas rich typer
 
     - name: Create Test Data
       run: |
+        # Create a dummy python file to ensure we have something to scan
         mkdir -p examples/vulnerable_code
-        echo 'print("Hello World")' > examples/vulnerable_code/test.py
+        echo 'import os; os.system("ls")' > examples/vulnerable_code/test.py
+
+    - name: Debug CLI
+      run: |
+        # Print help to logs to verify arguments
+        python main.py --help || echo "Help command failed"
 
     - name: Run Security Scan
-      # We allow this step to fail because we handle the missing file in the next step
+      # We allow this step to fail so the workflow continues to the "Ensure Report" step
       continue-on-error: true
       run: |
+        # Try running the scan. If your script uses 'scan' subcommand, update it here.
         python main.py examples/vulnerable_code/ --output scan_results.json --severity low
 
     - name: Ensure Report Exists
-      if: always() # Run this even if the previous step crashed
+      if: always() # Run this even if the scan step crashed
       run: |
         # If the scan failed to create the file, create a dummy one
         if [ ! -f scan_results.json ]; then
-          echo '{"summary": {"error": "Scan failed to run"}, "vulnerabilities": []}' > scan_results.json
+          echo '{"summary": {"error": "Scan failed to run or crashed"}, "vulnerabilities": []}' > scan_results.json
         fi
         
+        # Ensure HTML report exists too
         if [ ! -f scan_results.html ]; then
-          echo '<html><body><h1>Scan Failed</h1><p>Check GitHub Actions logs.</p></body></html>' > scan_results.html
+          echo '<html><body><h1>Scan Failed</h1><p>Check GitHub Actions logs for the python traceback.</p></body></html>' > scan_results.html
         fi
 
     - name: Upload Security Report
