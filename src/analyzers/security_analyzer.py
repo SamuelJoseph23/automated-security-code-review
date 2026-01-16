@@ -3,14 +3,20 @@ from pathlib import Path
 from ..detectors.pattern_detector import PatternBasedDetector, Vulnerability
 from ..detectors.ast_analyzer import ASTSecurityAnalyzer
 from ..detectors.ml_classifier import MLVulnerabilityClassifier
+from ..config import config
+from ..utils.logger import get_logger
 import subprocess
 import json
 
 class SecurityCodeAnalyzer:
     """Integrated security analyzer using multiple detection methods"""
     
-    def __init__(self, use_ml: bool = True):
-        print("🔧 Initializing Security Code Analyzer...")
+    def __init__(self, use_ml: bool = True, min_severity: str = "low"):
+        self.logger = get_logger(__name__)
+        self.logger.info("Initializing Security Code Analyzer...")
+        
+        # Store configuration
+        self.min_severity = min_severity
         
         # Initialize detectors
         self.pattern_detector = PatternBasedDetector()
@@ -22,30 +28,35 @@ class SecurityCodeAnalyzer:
             self.ml_classifier = MLVulnerabilityClassifier()
             try:
                 self.ml_classifier.load_model()
-            except:
-                print("⚠️  Training new ML model...")
+                self.logger.info("ML model loaded successfully")
+            except Exception as e:
+                self.logger.warning(f"Training new ML model: {str(e)}")
                 training_data = self.ml_classifier.get_synthetic_training_data()
                 self.ml_classifier.train(training_data)
                 self.ml_classifier.save_model()
         
-        print("✅ Analyzer initialized successfully")
+        self.logger.info("Analyzer initialized successfully")
     
     def analyze_file(self, file_path: str) -> Dict:
         """Analyze a single file comprehensively"""
-        print(f"\n📝 Analyzing: {file_path}")
+        self.logger.info(f"Analyzing: {file_path}")
         
         path = Path(file_path)
         language = self._detect_language(path)
         
         if not language:
-            return {"error": f"Unsupported file type: {path.suffix}"}
+            error_msg = f"Unsupported file type: {path.suffix}"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
         
         # Read code
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 code = f.read()
         except Exception as e:
-            return {"error": f"Could not read file: {str(e)}"}
+            error_msg = f"Could not read file: {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
         
         # Run multiple detection methods
         results = {
@@ -55,7 +66,7 @@ class SecurityCodeAnalyzer:
         }
         
         # 1. Pattern-based detection
-        print("   🔍 Running pattern-based detection...")
+        self.logger.debug("Running pattern-based detection...")
         pattern_vulns = self.pattern_detector.detect_vulnerabilities(code, language)
         results['vulnerabilities'].extend([
             self._vulnerability_to_dict(v) for v in pattern_vulns
@@ -63,7 +74,7 @@ class SecurityCodeAnalyzer:
         
         # 2. AST analysis (Python only)
         if language == 'python':
-            print("   🌳 Running AST analysis...")
+            self.logger.debug("Running AST analysis...")
             ast_issues = self.ast_analyzer.analyze(code)
             results['vulnerabilities'].extend([
                 {
@@ -79,13 +90,13 @@ class SecurityCodeAnalyzer:
         
         # 3. Bandit (Python only)
         if language == 'python':
-            print("   🛡️  Running Bandit scan...")
+            self.logger.debug("Running Bandit scan...")
             bandit_results = self._run_bandit(file_path)
             results['vulnerabilities'].extend(bandit_results)
         
         # 4. ML classification (if trained)
         if self.ml_classifier and self.ml_classifier.is_trained:
-            print("   🤖 Running ML classification...")
+            self.logger.debug("Running ML classification...")
             for vuln in results['vulnerabilities']:
                 snippet = vuln.get('code_snippet', '')
                 if snippet:
@@ -105,7 +116,7 @@ class SecurityCodeAnalyzer:
             'medium': total_vulns - critical - high
         }
         
-        print(f"   ✓ Found {total_vulns} potential vulnerabilities")
+        self.logger.info(f"Found {total_vulns} potential vulnerabilities")
         
         return results
     
@@ -116,7 +127,7 @@ class SecurityCodeAnalyzer:
     ) -> List[Dict]:
         """Analyze all files in a directory"""
         if extensions is None:
-            extensions = ['.py', '.js', '.java']
+            extensions = config.get_supported_extensions()[:3]  # Default to first 3
         
         results = []
         path = Path(directory)
@@ -130,14 +141,22 @@ class SecurityCodeAnalyzer:
             if not self._should_skip(f)
         ]
         
-        print(f"\n🔍 Found {len(files_to_scan)} files to scan\n")
+        self.logger.info(f"Found {len(files_to_scan)} files to scan")
         
         for i, file_path in enumerate(files_to_scan, 1):
-            print(f"[{i}/{len(files_to_scan)}]", end=' ')
+            self.logger.info(f"Scanning file {i}/{len(files_to_scan)}: {file_path.name}")
             result = self.analyze_file(str(file_path))
             results.append(result)
         
         return results
+    
+    def scan_file(self, file_path: str) -> Dict:
+        """Alias for analyze_file for CLI compatibility"""
+        return self.analyze_file(file_path)
+    
+    def scan_directory(self, directory: str, extensions: List[str] = None) -> List[Dict]:
+        """Alias for analyze_directory for CLI compatibility"""
+        return self.analyze_directory(directory, extensions)
     
     def _run_bandit(self, file_path: str) -> List[Dict]:
         """Run Bandit static analysis tool"""
@@ -146,7 +165,7 @@ class SecurityCodeAnalyzer:
                 ['bandit', '-f', 'json', file_path],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=config.BANDIT_TIMEOUT
             )
             
             if result.stdout:
@@ -162,25 +181,18 @@ class SecurityCodeAnalyzer:
                     }
                     for issue in data.get('results', [])
                 ]
+        except FileNotFoundError:
+            self.logger.warning("Bandit not found - install with: pip install bandit")
+        except subprocess.TimeoutExpired:
+            self.logger.warning(f"Bandit scan timed out after {config.BANDIT_TIMEOUT}s")
         except Exception as e:
-            print(f"   ⚠️  Bandit failed: {str(e)}")
+            self.logger.warning(f"Bandit scan failed: {str(e)}")
         
         return []
     
     def _detect_language(self, path: Path) -> str:
         """Detect programming language from file extension"""
-        extension_map = {
-            '.py': 'python',
-            '.js': 'javascript',
-            '.jsx': 'javascript',
-            '.ts': 'javascript',
-            '.tsx': 'javascript',
-            '.java': 'java',
-            '.c': 'c',
-            '.cpp': 'cpp',
-            '.php': 'php',
-        }
-        return extension_map.get(path.suffix, None)
+        return config.detect_language(path.suffix)
     
     def _vulnerability_to_dict(self, vuln: Vulnerability) -> Dict:
         """Convert Vulnerability dataclass to dict"""
@@ -199,8 +211,5 @@ class SecurityCodeAnalyzer:
     
     def _should_skip(self, file_path: Path) -> bool:
         """Check if file should be skipped"""
-        skip_dirs = {
-            'venv', 'node_modules', '.git', '__pycache__',
-            'build', 'dist', '.pytest_cache', 'env', 'venv'
-        }
+        skip_dirs = config.get_skip_directories()
         return any(part in skip_dirs for part in file_path.parts)

@@ -5,15 +5,35 @@ from datetime import datetime
 def generate_html_report(scan_results, output_path="scan_results.html"):
     """
     Generates a standalone HTML report from the scan results.
+    scan_results can be either a single dict or a list of dicts.
     """
     
-    # safe extraction of data with defaults
-    summary = scan_results.get("summary", {})
-    vulnerabilities = scan_results.get("vulnerabilities", [])
-    
-    total_files = summary.get("total_files", 0)
-    total_issues = summary.get("total_issues", 0)
-    scan_duration = summary.get("scan_duration", 0)
+    # Handle both list and single dict inputs
+    if isinstance(scan_results, list):
+        # Multiple scan results - aggregate them
+        all_vulns = []
+        total_files = len(scan_results)
+        total_issues = 0
+        
+        for result in scan_results:
+            vulns = result.get("vulnerabilities", [])
+            # Add file name to each vulnerability if not present
+            for vuln in vulns:
+                if 'file' not in vuln:
+                    vuln['file'] = result.get('file', 'Unknown')
+            all_vulns.extend(vulns)
+        
+        total_issues = len(all_vulns)
+        vulnerabilities = all_vulns
+        scan_duration = 0
+    else:
+        # Single scan result
+        summary = scan_results.get("summary", {})
+        vulnerabilities = scan_results.get("vulnerabilities", [])
+        
+        total_files = summary.get("total_files", 1)
+        total_issues = summary.get("total_issues", len(vulnerabilities))
+        scan_duration = summary.get("scan_duration", 0)
     
     # Generate the vulnerability rows using a standard python loop
     vuln_rows_html = ""

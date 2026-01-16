@@ -28,10 +28,10 @@ uploaded_file = st.file_uploader("Upload Code File", type=['py', 'js', 'java', '
 
 if uploaded_file is not None:
     # Save temp file with correct extension
-    # Streamlit uploads don't persist names easily, so we must capture the suffix
     file_ext = os.path.splitext(uploaded_file.name)[1]
     temp_filename = f"temp_scan_file{file_ext}"
     
+    # Write uploaded file
     with open(temp_filename, "wb") as f:
         f.write(uploaded_file.getbuffer())
     
@@ -125,11 +125,17 @@ if uploaded_file is not None:
                 
     except Exception as e:
         st.error(f"An application error occurred: {str(e)}")
+        import traceback
+        with st.expander("See Error Details"):
+            st.code(traceback.format_exc())
         
     finally:
-        # Cleanup
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+        # Cleanup - ensure temp file is always removed
+        try:
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+        except Exception as cleanup_error:
+            st.warning(f"Could not cleanup temp file: {cleanup_error}")
 
 else:
     st.info("👆 Upload a source code file to begin security analysis.")

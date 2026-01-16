@@ -80,3 +80,8 @@ Thumbs.db
 *.bak
 *.swp
 .cache/
+
+# Project-specific temporary files
+temp_scan_file*
+scan_results.*
+/report.json
