@@ -8,7 +8,7 @@ An intelligent security code analysis tool that combines **pattern-based detecti
 ## Features
 
 - **Multi-Language Support**: Analyze Python, JavaScript, Java, C/C++, PHP, and more
-- **Multiple Detection Methods**:
+- **Multiple Detection Methods Used**:
   -  Pattern-based vulnerability detection using regex patterns
   -  Abstract Syntax Tree (AST) analysis for Python code
   -  Machine Learning classifier for vulnerability prediction
