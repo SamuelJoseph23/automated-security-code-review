@@ -1,4 +1,4 @@
-# Automated Security Code Review
+# CodeShield - Automated Security Code Review
 
 An intelligent security code analysis tool that combines **pattern-based detection**, **AST analysis**, **machine learning**, and **static analysis** (Bandit) to identify vulnerabilities in your source code.
 
