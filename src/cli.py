@@ -38,7 +38,7 @@ def scan(
         logger.error(f"Path does not exist: {target_path}")
         raise typer.Exit(code=1)
 
-    console.print(Panel.fit(f"🚀 Starting Security Scan on: [bold]{target}[/bold]", border_style="blue"))
+    console.print(Panel.fit(f"Starting Security Scan on: [bold]{target}[/bold]", border_style="blue"))
     logger.info(f"Starting security scan on: {target}")
 
     try:
@@ -58,18 +58,18 @@ def scan(
         with open(output, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=4, ensure_ascii=False)
         
-        console.print(f"[green]✔ JSON report saved to:[/green] {output}")
+        console.print(f"[green]DONE: JSON report saved to:[/green] {output}")
         logger.info(f"JSON report saved to: {output}")
 
         # 4. Generate HTML Report
         if generate_html:
             html_path = str(Path(output).with_suffix('.html'))
             
-            console.print("[yellow]⚡ Generating HTML report...[/yellow]")
+            console.print("[yellow]Generating HTML report...[/yellow]")
             logger.info("Generating HTML report")
             generate_html_report(results, output_path=html_path)
             
-            console.print(f"[bold green]✔ HTML report generated successfully:[/bold green] {html_path}")
+            console.print(f"[bold green]SUCCESS: HTML report generated successfully:[/bold green] {html_path}")
             logger.info(f"HTML report saved to: {html_path}")
         
         # Summary
@@ -79,7 +79,7 @@ def scan(
         logger.info(f"Scan complete: {total_files} files, {total_vulns} issues")
 
     except Exception as e:
-        console.print(f"[bold red]❌ An error occurred during the scan:[/bold red] {e}")
+        console.print(f"[bold red]ERROR: An error occurred during the scan:[/bold red] {e}")
         logger.exception("Scan failed with exception")
         raise typer.Exit(code=1)
 

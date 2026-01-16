@@ -45,17 +45,17 @@ def test_file(file_path: str, output_name: str):
         json_path = reports_dir / f"{output_name}.json"
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=4)
-        print(f"\n✓ JSON report saved: {json_path}")
+        print(f"\n[DONE] JSON report saved: {json_path}")
         
         # Generate HTML report
         html_path = reports_dir / f"{output_name}.html"
         generate_html_report([result], output_path=str(html_path))
-        print(f"✓ HTML report saved: {html_path}")
+        print(f"[DONE] HTML report saved: {html_path}")
         
         return result
         
     except Exception as e:
-        print(f"✗ Error scanning {file_path}: {e}")
+        print(f"[FAILURE] Error scanning {file_path}: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -88,7 +88,7 @@ def main():
             else:
                 failures += 1
         else:
-            print(f"\n✗ File not found: {file_path}")
+            print(f"\n[FAILURE] File not found: {file_path}")
             failures += 1
     
     # Final summary

@@ -40,7 +40,7 @@ def generate_html_report(scan_results, output_path="scan_results.html"):
     if not vulnerabilities:
         vuln_rows_html = """
         <div class="no-issues">
-            <h3>✅ No vulnerabilities found</h3>
+            <h3>No vulnerabilities found</h3>
             <p>Great job! Your code passed all security checks.</p>
         </div>
         """
@@ -100,7 +100,7 @@ def generate_html_report(scan_results, output_path="scan_results.html"):
 </head>
 <body>
     <div class="header">
-        <h1>🛡️ Security Code Review Report</h1>
+        <h1>Security Code Review Report</h1>
         <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
         
         <div class="summary-grid">
@@ -130,7 +130,7 @@ def generate_html_report(scan_results, output_path="scan_results.html"):
     try:
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
-        print(f"✅ HTML Report generated: {output_path}")
+        print(f"DONE: HTML Report generated: {output_path}")
     except Exception as e:
-        print(f"❌ Failed to generate HTML report: {e}")
+        print(f"ERROR: Failed to generate HTML report: {e}")
 

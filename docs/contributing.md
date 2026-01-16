@@ -509,4 +509,4 @@ If you have questions:
 
 ---
 
-Thank you for contributing to Automated Security Code Review! 🛡️
+Thank you for contributing to Automated Security Code Review!

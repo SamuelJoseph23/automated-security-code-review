@@ -2,8 +2,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from typing import List, Dict, Tuple
-import pickle
+from src.utils.logger import setup_logger
 import os
+import pickle
+
+logger = setup_logger("ml_classifier")
 
 class MLVulnerabilityClassifier:
     """Traditional ML-based vulnerability classification"""
@@ -37,14 +40,16 @@ class MLVulnerabilityClassifier:
             X_texts.append(sample['code'])
             y_labels.append(sample['vulnerability_type'])
         
-        # Vectorize code samples
+        # Vectorize code samples using TF-IDF (Term Frequency-Inverse Document Frequency)
+        # This converts code text into numerical vectors that the ML model can understand
         X = self.vectorizer.fit_transform(X_texts)
         
-        # Train classifier
+        # Train RandomForest classifier
+        # We use RandomForest because it handles high-dimensional sparse data (like code tokens) well
         self.classifier.fit(X, y_labels)
         self.is_trained = True
         
-        print(f"✅ Model trained on {len(training_data)} samples")
+        logger.info(f"Model trained successfully on {len(training_data)} samples")
     
     def predict(self, code_snippet: str) -> Tuple[str, float]:
         """Predict vulnerability type and confidence"""
@@ -76,9 +81,9 @@ class MLVulnerabilityClassifier:
                 self.vectorizer = data['vectorizer']
                 self.classifier = data['classifier']
                 self.is_trained = data['is_trained']
-            print(f"✅ Model loaded from {path}")
+            logger.info(f"Model loaded successfully from {path}")
         else:
-            print(f"⚠️  No saved model found at {path}")
+            logger.warning(f"No saved model found at {path}. A new model will be trained on the fly.")
     
     def get_synthetic_training_data(self) -> List[Dict]:
         """Generate synthetic training data for demonstration"""

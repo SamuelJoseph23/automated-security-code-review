@@ -7,11 +7,11 @@ import os
 # Page config
 st.set_page_config(
     page_title="Security Code Review",
-    page_icon="🛡️",
+    page_icon="search",
     layout="wide"
 )
 
-st.title("🛡️ Automated Security Code Review")
+st.title("Automated Security Code Review")
 st.markdown("### Classical ML & Pattern-Based Detection")
 
 # Sidebar
@@ -44,11 +44,11 @@ if uploaded_file is not None:
         
         # --- ERROR HANDLING ---
         if "error" in results:
-            st.error(f"❌ Analysis Failed: {results['error']}")
+            st.error(f"Analysis Failed: {results['error']}")
             st.warning("Make sure the file extension is supported (.py, .js, .java, etc.)")
         
         elif "summary" not in results:
-            st.error("❌ Unexpected Error: Analysis results missing summary data.")
+            st.error("Unexpected Error: Analysis results missing summary data.")
             with st.expander("See Raw Debug Data"):
                 st.json(results)
             
@@ -81,7 +81,7 @@ if uploaded_file is not None:
                 
                 if not df_filtered.empty:
                     # Charts
-                    st.subheader("📊 Vulnerability Distribution")
+                    st.subheader("Vulnerability Distribution")
                     chart_col1, chart_col2 = st.columns(2)
                     
                     with chart_col1:
@@ -97,7 +97,7 @@ if uploaded_file is not None:
                             st.plotly_chart(fig_type, use_container_width=True)
                     
                     # Detailed Table
-                    st.subheader("📝 Detailed Findings")
+                    st.subheader("Detailed Findings")
                     
                     # Select specific columns to display
                     display_cols = ['type', 'severity', 'line', 'description', 'fix_recommendation']
@@ -111,7 +111,7 @@ if uploaded_file is not None:
                     )
                     
                     # Code Viewer
-                    st.subheader("💻 Code Inspector")
+                    st.subheader("Code Inspector")
                     with open(temp_filename, "r", encoding="utf-8", errors='replace') as f:
                         code_content = f.read()
                     
@@ -121,7 +121,7 @@ if uploaded_file is not None:
                 else:
                     st.info("No vulnerabilities match the selected filters.")
             else:
-                st.success("✅ Clean Scan! No vulnerabilities found in this file.")
+                st.success("Clean Scan! No vulnerabilities found in this file.")
                 
     except Exception as e:
         st.error(f"An application error occurred: {str(e)}")
