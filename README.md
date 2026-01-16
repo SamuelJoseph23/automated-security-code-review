@@ -1,25 +1,25 @@
-# 🛡️ Automated Security Code Review
+# Automated Security Code Review
 
 An intelligent security code analysis tool that combines **pattern-based detection**, **AST analysis**, **machine learning**, and **static analysis** (Bandit) to identify vulnerabilities in your source code.
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🌟 Features
+## Features
 
 - **Multi-Language Support**: Analyze Python, JavaScript, Java, C/C++, PHP, and more
 - **Multiple Detection Methods**:
-  - 🔍 Pattern-based vulnerability detection using regex patterns
-  - 🌳 Abstract Syntax Tree (AST) analysis for Python code
-  - 🤖 Machine Learning classifier for vulnerability prediction
-  - 🛡️ Bandit integration for Python security scanning
+  -  Pattern-based vulnerability detection using regex patterns
+  -  Abstract Syntax Tree (AST) analysis for Python code
+  -  Machine Learning classifier for vulnerability prediction
+  -  Bandit integration for Python security scanning
 - **Rich CLI Interface**: Beautiful terminal output with progress indicators
 - **Interactive Dashboard**: Streamlit-based web interface for visual analysis
 - **Comprehensive Reports**: JSON and HTML report generation
 - **Severity Classification**: Critical, High, Medium, and Low severity ratings
 - **CWE Mappings**: Common Weakness Enumeration references for identified issues
 
-## 📦 Installation
+##  Installation
 
 ### Prerequisites
 
@@ -50,7 +50,7 @@ pip install -e .
 pip install bandit
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Command Line Interface
 
@@ -130,7 +130,7 @@ cp .env.example .env
 python main.py scan myproject/
 ```
 
-## 🏗️ Architecture
+##  Architecture
 
 The tool uses a multi-layered approach to security analysis:
 
@@ -162,7 +162,7 @@ The tool uses a multi-layered approach to security analysis:
 
 For detailed architecture documentation, see [docs/architecture.md](docs/architecture.md).
 
-## 🎯 Supported Vulnerability Types
+##  Supported Vulnerability Types
 
 - **SQL Injection** (CWE-89)
 - **Cross-Site Scripting (XSS)** (CWE-79)
@@ -241,7 +241,7 @@ custom_pattern:
   cwe: "CWE-XXX"
 ```
 
-## 🧪 Testing
+## Testing
 
 Run the test suite:
 
@@ -256,7 +256,7 @@ pytest --cov=src --cov-report=html
 pytest tests/test_analyzers/test_security_analyzer.py
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](docs/contributing.md) for guidelines.
 
@@ -266,18 +266,18 @@ Contributions are welcome! Please see [CONTRIBUTING.md](docs/contributing.md) fo
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Bandit](https://github.com/PyCQA/bandit) - Python security linter
 - [tree-sitter](https://tree-sitter.github.io/) - Multi-language parsing
 - [Streamlit](https://streamlit.io/) - Dashboard framework
 - OWASP and CWE for vulnerability classifications
 
-## 📧 Contact
+## Contact
 
 Samuel Joseph - [@SamuelJoseph23](https://github.com/SamuelJoseph23)
 
@@ -295,4 +295,4 @@ Project Link: [https://github.com/SamuelJoseph23/automated-security-code-review]
 
 ---
 
-**⚠️ Disclaimer**: This tool is designed to assist in identifying potential security vulnerabilities. It should not be the only security measure employed. Always conduct thorough manual security reviews and testing.
+**Disclaimer**: This tool is designed to assist in identifying potential security vulnerabilities. It should not be the only security measure employed. Always conduct thorough manual security reviews and testing.
